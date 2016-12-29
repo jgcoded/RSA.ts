@@ -1,0 +1,20 @@
+{
+  "name": "rsa.ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "",
+  "scripts": {
+    "test": "tsc -p . && mocha",
+    "test-watch": "mocha-typescript-watch",
+    "prepublish": "tsc -p ."
+  },
+  "author": "Julio Gutierrez",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/expect.js": "^0.3.29",
+    "expect.js": "^0.3.1",
+    "mocha": "^3.2.0",
+    "mocha-typescript": "^1.0.15",
+    "typescript": "^2.1.4"
+  }
+}
