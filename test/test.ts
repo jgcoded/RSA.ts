@@ -106,19 +106,66 @@ import expect = require("expect.js");
     }
 
     @test "Encryption"() {
-        let p = 43;
-        let q = 59;
-        expect(rsa.encrypt("stop", 43*59, 13)).eql([2081, 2182]);
+
+        // Keep p and q secret
+        let p : number = 43;
+        let q : number = 59;
+
+        let e : number = 13; // Relatively prime to (p-1)(q-1)
+        expect(maths.isRelativelyPrime(e, (p-1)*(q-1))).ok();
+
+        let n : number = p*q;
+
+        let message : string = 'stop';
+        let blocksToEncrypt = rsa.getBlocksToEncrypt(rsa.translateMessage(message), n);
+        expect(rsa.encrypt(blocksToEncrypt, n, 13)).eql([2081, 2182]);
     }
 
     @test "Decryption"() {
 
+        // Keep p and q secret
         let p : number = 43;
         let q : number = 59;
-        let e : number = 13;
 
         let n : number = p*q;
+        let e : number = 13;
+
+        // d can be precomputed
         let d : number = maths.modularInverse(e, (p-1)*(q-1));
-        expect(rsa.decrypt([2081, 2182], n, d)).equal('stop');
+        
+        expect(rsa.decrypt([2081, 2182], n, d)).eql([1819, 1415]);
+        expect(rsa.blocksToPlaintext(rsa.decrypt([2081, 2182], n, d))).equal('stop');
+    }
+
+    /*
+        Scenario: Alice wants to send a message to her friend Bob
+                  Bob so that Bob can be sure it came from her.
+    */
+    @test "Digital Signature"() {
+
+        interface Key {
+            n : number,
+            v : number
+        }
+
+        // Bob has the public key
+        let publicKey : Key = { n:2537, v:13 };
+
+        // Alice has the private key
+        let privateKey : Key = { n:2537, v:937 };
+
+        // Alice applies the decrypt() algorithm first
+        let message = 'stop';
+        let translatedMessage : string = rsa.translateMessage(message);
+        let blocks : Array<number> = rsa.getBlocksToEncrypt(translatedMessage, publicKey.n);
+        let encryptedBlocks = rsa.decrypt(blocks, publicKey.n, privateKey.v);
+
+        // Alice sends the encryptedBlocks to Bob
+
+        // Bob Receives the encryptedBlocks, and he applies the RSA encryption
+        let decryptedBlocks : Array<number> = rsa.encrypt(encryptedBlocks, publicKey.n, publicKey.v);
+        let plaintext : string = rsa.blocksToPlaintext(blocks);
+
+        expect(plaintext).equal(message);
     }
 }

@@ -19,9 +19,6 @@ export function translateMessage(message : string) : string {
     return translation;
 }
 
-/*!
-    assumes translatedMEssage has an even length
-*/
 export function untranslateMessage(translatedMessage : string) : string {
 
     let message : string = "";
@@ -38,6 +35,14 @@ export function untranslateMessage(translatedMessage : string) : string {
     }
 
     return message;
+}
+
+export function blocksToPlaintext(blocks : Array<number>) : string {
+    return blocks.map((value : number) => {
+        return untranslateMessage(value.toString());
+    }).reduce((previousValue : string, value : string) => {
+        return previousValue + value;
+    });
 }
 
 export function getBlockSize(n : number) : number {
@@ -85,13 +90,11 @@ export function getBlocksToEncrypt(translatedMessage : string, n : number) : Arr
 
     \return An array of numbers representing the encrypted message
 */
-export function encrypt(message : string, n : number, e : number) : Array<number> {
+export function encrypt(blocksToEncrypt : Array<number>, n : number, e : number) : Array<number> {
 
-        let blocksToEncrypt = getBlocksToEncrypt(translateMessage(message), n);
-
-        return  blocksToEncrypt.map((value : number) => {
-            return maths.fastModularExponentiation(value, e, n);
-        });
+    return blocksToEncrypt.map((value : number) => {
+        return maths.fastModularExponentiation(value, e, n);
+    });
 }
 
 /*!
@@ -108,21 +111,13 @@ export function encrypt(message : string, n : number, e : number) : Array<number
              RSA encryption algorithm.
     \param d The module inverse of e mod (p-1)(q-1), also known as the decryption key
 
-    \return The plaintext message
+    \return An array of numbers representing the plaintext message
 */
-export function decrypt(cipherBlocks : Array<number>, n : number, d : number) : string {
+export function decrypt(cipherBlocks : Array<number>, n : number, d : number) : Array<number> {
     
     let blockSize = getBlockSize(n);
 
-    let translatedBlocks = cipherBlocks.map((value : number) => {
+    return cipherBlocks.map((value : number) => {
         return maths.fastModularExponentiation(value, d, n);
     });
-
-    let plaintext : string = translatedBlocks.map((value : number) => {
-        return untranslateMessage(value.toString());
-    }).reduce((previousValue : string, value : string) => {
-        return previousValue + value;
-    });
-
-    return plaintext;
 }
