@@ -2,6 +2,7 @@
 import { suite, test, slow, timeout, skip, only } from "mocha-typescript";
 import * as maths from "./../maths";
 import * as utils from "./../utils";
+import * as rsa from "./../rsa";
 import expect = require("expect.js");
 
 @suite class Utils {
@@ -71,11 +72,60 @@ import expect = require("expect.js");
         // can further reduce to:
         expect(solution % (3*5*7)).equal(23);
     }
+
+    @test "Fast Modular Exponentiation"() {
+
+        let b : number = 3;
+        let n : number = 644;
+        let m : number = 645;
+
+    }
 }
 
 @suite class RSA {
 
+    @test "Translation"() {
+
+        expect(rsa.translateMessage('abcz')).equal('00010225');
+    }
+
+    @test "Block Size"() {
+
+        expect(rsa.getBlockSize(23)).equal(0);
+        expect(rsa.getBlockSize(29)).equal(2);
+        expect(rsa.getBlockSize(2537)).equal(4);
+        expect(rsa.getBlockSize(104723)).equal(4);
+        expect(rsa.getBlockSize(694847533)).equal(8);
+    }
+
+    @test "Blocks"() {
+
+        expect(rsa.getBlocksToEncrypt('00010225', 2537)).eql([1, 225]);
+        expect(rsa.getBlocksToEncrypt('0001022519', 2537)).eql([1, 225, 1923]);
+    }
+
     @test "Encryption"() {
         
+        let p : number = 43;
+        let q : number = 59;
+        let n : number = p*q;
+
+        let e : number = 13;
+
+        expect(maths.isRelativelyPrime(e, (p-1)*(q-1))).ok();
+
+        let message : string = "abab";
+
+        let translatedMessage = rsa.translateMessage(message);
+        let blocksToEncrypt = rsa.getBlocksToEncrypt(translatedMessage, n);
+
+        expect(blocksToEncrypt).eql([1, 1]);
+
+        let cipherTextBlocks : Array<number> = blocksToEncrypt.map((value : number) => {
+
+            return Math.pow(value, e) % n;
+        });
+
+        expect(cipherTextBlocks).eql([1, 1]);
     }
 }
