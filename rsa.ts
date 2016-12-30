@@ -1,6 +1,16 @@
 
 import * as maths from "./maths"; 
 
+/*!
+    \brief Translates a message with ASCII characters a-z to padded numbers
+
+    The letter a is mapped to 00, b is mapped to 01,..., z is mapped to 25
+    Example: hello becomes 07 04 11 11 14 (but with no spaces)
+
+    \param message A string of lowercase letters from a to z
+
+    \return a translated string that has an even numbered length
+*/
 export function translateMessage(message : string) : string {
     
     let characters : Array<string> = message.split('');
@@ -19,6 +29,19 @@ export function translateMessage(message : string) : string {
     return translation;
 }
 
+/*!
+    \brief Translates a string of numbers to ASCII characters
+
+    This does the opposite of translateMessage(). The output of
+    translateMessage will always be an even number, but this
+    function does not expect translatedMessage to have an
+    even numbered length. In the case that it doesn't, the digits
+    in translatedMessage will be padded automatically.
+
+    Example: 0704111114 becomes hello
+
+    \param translatedMessage A string of numbers
+*/
 export function untranslateMessage(translatedMessage : string) : string {
 
     let message : string = "";
@@ -37,15 +60,14 @@ export function untranslateMessage(translatedMessage : string) : string {
     return message;
 }
 
-export function blocksToPlaintext(blocks : Array<number>) : string {
-    return blocks.map((value : number) => {
-        return untranslateMessage(value.toString());
-    }).reduce((previousValue : string, value : string) => {
-        return previousValue + value;
-    });
-}
+/*!
+    \brief Calculates the number of digits in a block
 
-export function getBlockSize(n : number) : number {
+    \param n A positive integer
+
+    \return The number of digits in a block
+*/
+export function calculateBlockSize(n : number) : number {
     let blockSize : number = 0;
     let digits : number = 0;
 
@@ -56,9 +78,21 @@ export function getBlockSize(n : number) : number {
     return blockSize;
 }
 
-export function getBlocksToEncrypt(translatedMessage : string, n : number) : Array<number> {
+/*!
+    \brief Converts a plaintext message to an array of numbers called blocks
+
+    The blocks this function returns can then be passed to encrypt() or decrypt().
+
+    \param plaintext The plaintext message to convert into blocks
+    \param n The public key n value
+
+    \return An array of numbers, called blocks
+*/
+export function plaintextToBlocks(plaintext : string, n : number) : Array<number> {
     
-    let blockSize : number = getBlockSize(n);
+    let translatedMessage : string = translateMessage(plaintext);
+
+    let blockSize : number = calculateBlockSize(n);
     let blocks : Array<number> = [];
 
     while(translatedMessage.length) {
@@ -74,6 +108,25 @@ export function getBlocksToEncrypt(translatedMessage : string, n : number) : Arr
 
     return blocks;
 }
+
+/*!
+    Converts an array of numbers to a plaintext message
+
+    This function is supposed to be used with decrypt(). That is,
+    decrypt()'s output is this function's input.
+
+    \param blocks The array of numbers
+
+    \return The plaintext message represented by the blocks
+*/
+export function blocksToPlaintext(blocks : Array<number>) : string {
+    return blocks.map((value : number) => {
+        return untranslateMessage(value.toString());
+    }).reduce((previousValue : string, value : string) => {
+        return previousValue + value;
+    });
+}
+
 
 /*!
     \brief Encrypts a plaintext message using the RSA block cipher algorithm
@@ -105,6 +158,8 @@ export function encrypt(blocksToEncrypt : Array<number>, n : number, e : number)
     than what JavaScript allows. As a result, small n and e values must
     be used.
 
+    TODO: use the Chinese Remainder Theorem from maths.ts to optimize decryption
+
     \param cipherBlocks An array of numbers obatained from the encrypt() function
     \param n n=p*q, where p and q are prime numbers and (p-1)(q-1) are
              relatively prime to e, the positive integer used in the
@@ -115,7 +170,7 @@ export function encrypt(blocksToEncrypt : Array<number>, n : number, e : number)
 */
 export function decrypt(cipherBlocks : Array<number>, n : number, d : number) : Array<number> {
     
-    let blockSize = getBlockSize(n);
+    let blockSize = calculateBlockSize(n);
 
     return cipherBlocks.map((value : number) => {
         return maths.fastModularExponentiation(value, d, n);

@@ -1,5 +1,9 @@
 import * as utils from "./utils";
 
+/*!
+    \brief Calculates the greatest common divisor of a and b
+    \return gcd(a, b)
+*/
 export function gcd(a : number, b : number) : number {
     let x : number = a;
     let y : number = b;
@@ -14,10 +18,18 @@ export function gcd(a : number, b : number) : number {
     return x;
 }
 
-export function isRelativelyPrime(a : number, b : number) : boolean {
+/*!
+    \brief Tests if a and b are relative prime
+    \return True if gcd(a, b) == 1
+*/
+export function areRelativelyPrime(a : number, b : number) : boolean {
     return gcd(a, b) == 1;
 }
 
+/*!
+    \brief Tests if all numbers in the input array are pairwise relatively prime
+    \return true if for all pairs in as, gcd(a, b) == 1
+*/
 export function arePairwiseRelativelyPrime(as : Array<number>) : boolean {
 
     return as.every((left : number, leftIndex : number) => {
@@ -27,11 +39,16 @@ export function arePairwiseRelativelyPrime(as : Array<number>) : boolean {
                 return true;
             }
 
-            return isRelativelyPrime(left, right);
+            return areRelativelyPrime(left, right);
         })
     });
 }
 
+/*!
+    \brief Calculates the modular inverse of a mod n
+
+    \return A number s such that s*a mod n == 1
+*/
 export function modularInverse(a : number, n : number) : number {
         // from https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
 

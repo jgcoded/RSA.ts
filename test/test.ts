@@ -32,7 +32,6 @@ import expect = require("expect.js");
 
 }
 
-
 @suite class Maths {
 
     @test "Euclidian Algorithm (gcd)"() {
@@ -45,7 +44,7 @@ import expect = require("expect.js");
 
     @test "Relatively Prime"() {
 
-        expect(maths.isRelativelyPrime(101, 4620)).ok();
+        expect(maths.areRelativelyPrime(101, 4620)).ok();
     }
 
     @test "Pairwise Relatively Prime"() {
@@ -83,26 +82,28 @@ import expect = require("expect.js");
     @test "Translation"() {
 
         expect(rsa.translateMessage('abcz')).equal('00010225');
+        expect(rsa.translateMessage('hello')).equal('0704111114');
     }
 
     @test "Untranslate"() {
 
         expect(rsa.untranslateMessage('00010225')).equal('abcz');
+        expect(rsa.untranslateMessage('0704111114')).equal('hello');
     }
 
     @test "Block Size"() {
 
-        expect(rsa.getBlockSize(23)).equal(0);
-        expect(rsa.getBlockSize(29)).equal(2);
-        expect(rsa.getBlockSize(2537)).equal(4);
-        expect(rsa.getBlockSize(104723)).equal(4);
-        expect(rsa.getBlockSize(694847533)).equal(8);
+        expect(rsa.calculateBlockSize(23)).equal(0);
+        expect(rsa.calculateBlockSize(29)).equal(2);
+        expect(rsa.calculateBlockSize(2537)).equal(4);
+        expect(rsa.calculateBlockSize(104723)).equal(4);
+        expect(rsa.calculateBlockSize(694847533)).equal(8);
     }
 
     @test "Blocks"() {
 
-        expect(rsa.getBlocksToEncrypt('00010225', 2537)).eql([1, 225]);
-        expect(rsa.getBlocksToEncrypt('0001022519', 2537)).eql([1, 225, 1923]);
+        expect(rsa.plaintextToBlocks('abcz', 2537)).eql([1, 225]);
+        expect(rsa.plaintextToBlocks('abczs', 2537)).eql([1, 225, 1823]);
     }
 
     @test "Encryption"() {
@@ -112,12 +113,12 @@ import expect = require("expect.js");
         let q : number = 59;
 
         let e : number = 13; // Relatively prime to (p-1)(q-1)
-        expect(maths.isRelativelyPrime(e, (p-1)*(q-1))).ok();
+        expect(maths.areRelativelyPrime(e, (p-1)*(q-1))).ok();
 
         let n : number = p*q;
 
         let message : string = 'stop';
-        let blocksToEncrypt = rsa.getBlocksToEncrypt(rsa.translateMessage(message), n);
+        let blocksToEncrypt = rsa.plaintextToBlocks(message, n);
         expect(rsa.encrypt(blocksToEncrypt, n, 13)).eql([2081, 2182]);
     }
 
@@ -156,8 +157,7 @@ import expect = require("expect.js");
 
         // Alice applies the decrypt() algorithm first
         let message = 'stop';
-        let translatedMessage : string = rsa.translateMessage(message);
-        let blocks : Array<number> = rsa.getBlocksToEncrypt(translatedMessage, publicKey.n);
+        let blocks : Array<number> = rsa.plaintextToBlocks(message, publicKey.n);
         let encryptedBlocks = rsa.decrypt(blocks, publicKey.n, privateKey.v);
 
         // Alice sends the encryptedBlocks to Bob
