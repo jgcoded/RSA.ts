@@ -92,3 +92,29 @@ export function chineseRemainderTheorem(as : Array<number>, ms : Array<number>) 
         return previousValue + currentValue[0] * currentValue[1] * currentValue[2];
     }, 0);
 }
+
+/*!
+    \brief calculates b^n mod m, where n can be large
+
+    \param b the base of the exponentiation b^n
+    \param n the exponent in b^n
+    \param m the modulus
+
+    \return The result of b^n mod m
+*/
+export function fastModularExponentiation(b : number, n : number, m : number) : number {
+    
+    let x : number = 1;
+    let power : number = b % m;
+    for(let i : number = 0; i < 32; ++i) {
+        let bit = (n >> i) & 1;
+
+        if(bit == 1) {
+            x = (x*power) % m;
+        } 
+
+        power = (power*power) % m;
+    }
+
+    return x;
+}

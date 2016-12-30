@@ -74,11 +74,7 @@ import expect = require("expect.js");
     }
 
     @test "Fast Modular Exponentiation"() {
-
-        let b : number = 3;
-        let n : number = 644;
-        let m : number = 645;
-
+        expect(maths.fastModularExponentiation(3, 644, 645)).equal(36);
     }
 }
 
@@ -87,6 +83,11 @@ import expect = require("expect.js");
     @test "Translation"() {
 
         expect(rsa.translateMessage('abcz')).equal('00010225');
+    }
+
+    @test "Untranslate"() {
+
+        expect(rsa.untranslateMessage('00010225')).equal('abcz');
     }
 
     @test "Block Size"() {
@@ -105,27 +106,19 @@ import expect = require("expect.js");
     }
 
     @test "Encryption"() {
-        
+        let p = 43;
+        let q = 59;
+        expect(rsa.encrypt("stop", 43*59, 13)).eql([2081, 2182]);
+    }
+
+    @test "Decryption"() {
+
         let p : number = 43;
         let q : number = 59;
-        let n : number = p*q;
-
         let e : number = 13;
 
-        expect(maths.isRelativelyPrime(e, (p-1)*(q-1))).ok();
-
-        let message : string = "abab";
-
-        let translatedMessage = rsa.translateMessage(message);
-        let blocksToEncrypt = rsa.getBlocksToEncrypt(translatedMessage, n);
-
-        expect(blocksToEncrypt).eql([1, 1]);
-
-        let cipherTextBlocks : Array<number> = blocksToEncrypt.map((value : number) => {
-
-            return Math.pow(value, e) % n;
-        });
-
-        expect(cipherTextBlocks).eql([1, 1]);
+        let n : number = p*q;
+        let d : number = maths.modularInverse(e, (p-1)*(q-1));
+        expect(rsa.decrypt([2081, 2182], n, d)).equal('stop');
     }
 }
