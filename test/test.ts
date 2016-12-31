@@ -188,7 +188,7 @@ import expect = require("expect.js");
 
     /*
         Scenario: Alice wants to send a message that only Bob
-                  can read it, and so that Bob can be sure it
+                  can read, and so that Bob can be sure it
                   came from her.
     */
     @test "Signed Secret Message"() {
