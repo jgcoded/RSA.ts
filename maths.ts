@@ -105,9 +105,9 @@ export function chineseRemainderTheorem(as : Array<number>, ms : Array<number>) 
         return modularInverse(a, n);
     });
 
-    return utils.zip3(as, Ms, ys).reduce((previousValue, currentValue) => {
+    return fastModularExponentiation(utils.zip3(as, Ms, ys).reduce((previousValue, currentValue) => {
         return previousValue + currentValue[0] * currentValue[1] * currentValue[2];
-    }, 0);
+    }, 0), 1, m);
 }
 
 /*!

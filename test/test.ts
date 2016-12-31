@@ -56,6 +56,10 @@ import expect = require("expect.js");
     @test "Extended Euclidian Algorithm (Modular Inverse)"() {
 
         expect(maths.modularInverse(101, 4620)).equal(1601);
+        expect(maths.modularInverse(3, 136*130)).equal(11787);
+        expect(11787 % 136).equal(91);
+        expect(11787 % 130).equal(87);
+        expect(maths.modularInverse(131, 137)).equal(114);
     }
 
     @test "Chinese Remainder Theorem"() {
@@ -67,13 +71,15 @@ import expect = require("expect.js");
 
         let solution = maths.chineseRemainderTheorem(as, ms);
 
-        expect(solution).equal(233);
-        // can further reduce to:
-        expect(solution % (3*5*7)).equal(23);
+        expect(solution).equal(23);
     }
 
     @test "Fast Modular Exponentiation"() {
         expect(maths.fastModularExponentiation(3, 644, 645)).equal(36);
+        expect(maths.fastModularExponentiation(8363, 11787, 17947)).equal(513);
+        expect(maths.fastModularExponentiation(8363, 91, 137)).equal(102);
+        expect(maths.fastModularExponentiation(8363, 87, 131)).equal(120);
+        expect(114*(102-120+137) % 137).equal(3);
     }
 }
 
@@ -83,12 +89,19 @@ import expect = require("expect.js");
 
         expect(rsa.translateMessage('abcz')).equal('00010225');
         expect(rsa.translateMessage('hello')).equal('0704111114');
+        expect(rsa.translateMessage('abcdefghijklmnopqrstuvwxyz')).eql(
+            '0001020304050607080910111213141516171819202122232425'
+        );
     }
 
     @test "Untranslate"() {
 
         expect(rsa.untranslateMessage('00010225')).equal('abcz');
         expect(rsa.untranslateMessage('0704111114')).equal('hello');
+        expect(rsa.untranslateMessage('0001020304050607080910111213141516171819202122232425'))
+        .eql('abcdefghijklmnopqrstuvwxyz');
+
+        expect(rsa.untranslateMessage('0')).equal('a');
     }
 
     @test "Block Size"() {
@@ -100,10 +113,15 @@ import expect = require("expect.js");
         expect(rsa.calculateBlockSize(694847533)).equal(8);
     }
 
-    @test "Blocks"() {
+    @test "Plaintext to Blocks"() {
 
         expect(rsa.plaintextToBlocks('abcz', 2537)).eql([1, 225]);
         expect(rsa.plaintextToBlocks('abczs', 2537)).eql([1, 225, 1823]);
+        expect(rsa.plaintextToBlocks('abcdefghij', 2537)).eql([1, 203, 405, 607, 809]);
+    }
+
+    @test "Blocks to plaintext"() {
+       expect(rsa.blocksToPlaintext([1, 203, 405, 607, 809], 2537)).equal('abcdefghij');
     }
 
     @test "Encryption"() {
@@ -112,14 +130,13 @@ import expect = require("expect.js");
         let p : number = 43;
         let q : number = 59;
 
-        let e : number = 13; // Relatively prime to (p-1)(q-1)
+        let e : number = 13;
         expect(maths.areRelativelyPrime(e, (p-1)*(q-1))).ok();
 
-        let n : number = p*q;
+        let key : rsa.PublicKey = rsa.makePublicKey(p, q, e);
 
-        let message : string = 'stop';
-        let blocksToEncrypt = rsa.plaintextToBlocks(message, n);
-        expect(rsa.encrypt(blocksToEncrypt, n, 13)).eql([2081, 2182]);
+        expect(rsa.encrypt([704, 1115], key)).eql([981, 461]);
+        expect(rsa.encrypt([1819, 1415], key)).eql([2081, 2182]);
     }
 
     @test "Decryption"() {
@@ -128,44 +145,85 @@ import expect = require("expect.js");
         let p : number = 43;
         let q : number = 59;
 
-        let n : number = p*q;
         let e : number = 13;
+        expect(maths.areRelativelyPrime(e, (p-1)*(q-1))).ok();
 
-        // d can be precomputed
-        let d : number = maths.modularInverse(e, (p-1)*(q-1));
-        
-        expect(rsa.decrypt([2081, 2182], n, d)).eql([1819, 1415]);
-        expect(rsa.blocksToPlaintext(rsa.decrypt([2081, 2182], n, d))).equal('stop');
+        let key : rsa.PrivateKey = rsa.makePrivateKey(p, q, e);
+
+        expect(rsa.decrypt([981, 461], key)).eql([704, 1115]);
+        expect(rsa.decrypt([2081, 2182], key)).eql([1819, 1415]);
     }
 
     /*
-        Scenario: Alice wants to send a message to her friend Bob
-                  Bob so that Bob can be sure it came from her.
+        Scenario: Alice wants to send a message to her friends
+                  so that they can be sure it came from her.
     */
     @test "Digital Signature"() {
 
-        interface Key {
-            n : number,
-            v : number
-        }
+        // Only Alice knows p and q, and she used those to calculate e
+        let p : number = 43;
+        let q : number = 59;
+        let e : number = 13;
+        expect(maths.areRelativelyPrime(e, (p-1)*(q-1))).ok();
 
-        // Bob has the public key
-        let publicKey : Key = { n:2537, v:13 };
+        // Alice gives the public key to her friends
+        let publicKey : rsa.PublicKey = rsa.makePublicKey(p, q, e);
 
-        // Alice has the private key
-        let privateKey : Key = { n:2537, v:937 };
+        // Only Alice has the private key
+        let privateKey : rsa.PrivateKey = rsa.makePrivateKey(p, q, e);
 
-        // Alice applies the decrypt() algorithm first
+        // Alice signs the message first
         let message = 'stop';
         let blocks : Array<number> = rsa.plaintextToBlocks(message, publicKey.n);
-        let encryptedBlocks = rsa.decrypt(blocks, publicKey.n, privateKey.v);
+        let encryptedBlocks = rsa.decrypt(blocks, privateKey);
 
-        // Alice sends the encryptedBlocks to Bob
+        // Alice sends the encryptedBlocks to her friends
 
-        // Bob Receives the encryptedBlocks, and he applies the RSA encryption
-        let decryptedBlocks : Array<number> = rsa.encrypt(encryptedBlocks, publicKey.n, publicKey.v);
-        let plaintext : string = rsa.blocksToPlaintext(blocks);
+        // Her friends receive the encryptedBlocks, and he applies the RSA encryption algorithm
+        let decryptedBlocks : Array<number> = rsa.encrypt(encryptedBlocks, publicKey);
+        let plaintext : string = rsa.blocksToPlaintext(blocks, publicKey.n);
 
         expect(plaintext).equal(message);
+    }
+
+    /*
+        Scenario: Alice wants to send a message that only Bob
+                  can read it, and so that Bob can be sure it
+                  came from her.
+    */
+    @test "Signed Secret Message"() {
+
+        // Alice gives Bob her public key
+        let alicesPublicKey : rsa.PublicKey = rsa.makePublicKey(43, 59, 13);
+
+        // Only Alice knows her private key
+        let alicesPrivateKey : rsa.PrivateKey = rsa.makePrivateKey(43, 59, 13);
+
+        // Bob gives Alice his public key
+        let bobsPublicKey : rsa.PublicKey = rsa.makePublicKey(137, 131, 3);
+
+        // Only bob knows his private key
+        let bobsPrivateKey : rsa.PrivateKey = rsa.makePrivateKey(137, 131, 3);
+
+        let message : string = 'sosx';
+
+        let blocks : Array<number> = [];
+
+        // First, Alice signs her message
+        blocks = rsa.decrypt(rsa.plaintextToBlocks(message, alicesPublicKey.n), alicesPrivateKey);
+
+        // Then, Alice encrypts her message using Bob's public key
+        blocks = rsa.encrypt(blocks, bobsPublicKey);
+
+        // Alice sends the encrypted blocks to Bob
+
+        // Bob receives the encrypted blocks and decrypts them
+        blocks = rsa.decrypt(blocks, bobsPrivateKey);
+
+        // Then, Bob applies the RSA encryption using Alice's public key
+        blocks = rsa.encrypt(blocks, alicesPublicKey);
+
+        // Finally, Bob can see Alice's signed, secret message
+        expect(rsa.blocksToPlaintext(blocks, alicesPublicKey.n)).equal(message);
     }
 }

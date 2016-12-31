@@ -2,6 +2,58 @@
 import * as maths from "./maths"; 
 
 /*!
+    \brief Data structure that holds RSA information that can be given
+           out to others
+*/
+export interface PublicKey {
+    n : number,
+    e : number
+}
+
+/*!
+    \brief Data structure that holds RSA information that must NOT
+           be given out to others
+*/
+export interface PrivateKey {
+    p : number,
+    q : number,
+    d : number,
+    dp : number,
+    dq : number,
+    qinv : number
+}
+
+/*!
+    \brief Creates a private key from p, q, and e
+
+    \param p A prime number
+    \param q A prime number
+    \param e A positive integer that is relatively prime to (p-1)*(q-1)
+
+    \return a PrivateKey object
+*/
+export function makePrivateKey(p : number, q : number, e : number) : PrivateKey {
+    
+    let d : number = maths.modularInverse(e, (p-1)*(q-1));
+    
+    return {
+        p: p,
+        q: q,
+        d: d,
+        dp: d % (p-1),
+        dq: d % (q-1),
+        qinv: maths.modularInverse(q, p)
+    };
+}
+
+export function makePublicKey(p : number, q : number, e : number) : PublicKey {
+    return {
+        n: p*q,
+        e: e
+    };
+}
+
+/*!
     \brief Translates a message with ASCII characters a-z to padded numbers
 
     The letter a is mapped to 00, b is mapped to 01,..., z is mapped to 25
@@ -116,12 +168,32 @@ export function plaintextToBlocks(plaintext : string, n : number) : Array<number
     decrypt()'s output is this function's input.
 
     \param blocks The array of numbers
+    \param n The public key n value
 
     \return The plaintext message represented by the blocks
 */
-export function blocksToPlaintext(blocks : Array<number>) : string {
+export function blocksToPlaintext(blocks : Array<number>, n : number) : string {
+    
+    let blockSize : number = calculateBlockSize(n);
+
     return blocks.map((value : number) => {
-        return untranslateMessage(value.toString());
+
+        let blockString = value.toString();
+
+        // Add in missing zeros
+        let paddingAmount : number = blockSize - blockString.length;
+        let padding = '';
+        if(paddingAmount < 0) {
+            paddingAmount = 0;
+        }
+
+        for(let i : number = 0; i < paddingAmount; i++) {
+            padding += '0';
+        }
+
+        blockString = padding + blockString;
+
+        return untranslateMessage(blockString);
     }).reduce((previousValue : string, value : string) => {
         return previousValue + value;
     });
@@ -143,10 +215,10 @@ export function blocksToPlaintext(blocks : Array<number>) : string {
 
     \return An array of numbers representing the encrypted message
 */
-export function encrypt(blocksToEncrypt : Array<number>, n : number, e : number) : Array<number> {
+export function encrypt(blocksToEncrypt : Array<number>, key : PublicKey) : Array<number> {
 
     return blocksToEncrypt.map((value : number) => {
-        return maths.fastModularExponentiation(value, e, n);
+        return maths.fastModularExponentiation(value, key.e, key.n);
     });
 }
 
@@ -158,21 +230,45 @@ export function encrypt(blocksToEncrypt : Array<number>, n : number, e : number)
     than what JavaScript allows. As a result, small n and e values must
     be used.
 
-    TODO: use the Chinese Remainder Theorem from maths.ts to optimize decryption
-
     \param cipherBlocks An array of numbers obatained from the encrypt() function
-    \param n n=p*q, where p and q are prime numbers and (p-1)(q-1) are
-             relatively prime to e, the positive integer used in the
-             RSA encryption algorithm.
-    \param d The module inverse of e mod (p-1)(q-1), also known as the decryption key
+    \param key The private key used to decrypt the message
 
     \return An array of numbers representing the plaintext message
 */
-export function decrypt(cipherBlocks : Array<number>, n : number, d : number) : Array<number> {
+export function decrypt(blocks : Array<number>, key : PrivateKey) : Array<number> {
     
-    let blockSize = calculateBlockSize(n);
+    /*
+        Implementation using the general Chinese Remainder algorithm:
+        return blocks.map((value : number) => {
 
-    return cipherBlocks.map((value : number) => {
-        return maths.fastModularExponentiation(value, d, n);
-    });
+            let cp : number = maths.fastModularExponentiation(value, 1, key.p);
+            let cq : number = maths.fastModularExponentiation(value, 1, key.q);
+
+            let mp : number = maths.fastModularExponentiation(cp, key.dp, key.p);
+            let mq : number = maths.fastModularExponentiation(cq, key.dq, key.q);
+
+            return maths.chineseRemainderTheorem([mp, mq], [key.p, key.q]);
+        });
+    */
+
+    // Chinese Remainder algorithm optimization from:
+    // https://en.wikipedia.org/wiki/RSA_(cryptosystem)#Using_the_Chinese_remainder_algorithm
+    return blocks.map((value : number) => {
+
+        let m1 : number = maths.fastModularExponentiation(value, key.dp, key.p);
+        let m2 : number = maths.fastModularExponentiation(value, key.dq, key.q);
+
+        let h : number = 0;
+
+        if(m1 < m2) {
+            
+            h = (key.qinv*(m1 - m2 + key.p)) % key.p;
+
+        } else {
+
+            h = (key.qinv*(m1 - m2)) % key.p;
+        }
+
+        return m2 + h*key.q;
+    });  
 }
