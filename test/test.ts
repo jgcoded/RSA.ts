@@ -1,8 +1,8 @@
 
 import { suite, test, slow, timeout, skip, only } from "mocha-typescript";
-import * as maths from "./../maths";
-import * as utils from "./../utils";
-import * as rsa from "./../rsa";
+import * as maths from "./../src/maths";
+import * as utils from "./../src/utils";
+import * as rsa from "./../src/rsa";
 import expect = require("expect.js");
 
 @suite class Utils {

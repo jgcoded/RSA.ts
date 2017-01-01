@@ -48,3 +48,8 @@ Here's an example of what the API looks like:
     expect(rsa.blocksToPlaintext(blocks, alicesPublicKey.n)).equal(message);
 }
 ```
+
+## Developing
+
+Open a terminal in the project root and use ```npm run test-watch```. This automatically runs the test suite upon saving source code. I like to keep this terminal window on one half of my screen,
+and my editor on the other half of the screen.
